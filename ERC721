@@ -1,10 +1,42 @@
-abstract contract ERC2981PerTokenRoyalties is ERC165, IERC2981Royalties {
+// SPDX-License-Identifier: UNLICENCED
+
+/**
+Intro goes here
+*/
+
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+
+abstract contract unGentlemen is ERC721, Ownable {
+ uint256 public mintPrice = 0 ether;
+ uint256 public totalSupply;
+ uint256 public maxSupply;
+ bool public isMintEnabled;
+ mapping(address => uint256) public mintedWallets;
+ address _artist;
+ address _feeToken;
+ uint256 _feeAmount;
+ using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
+ 
     struct Royalty {
         address recipient;
         uint256 value;
     }
 
     mapping(uint256 => Royalty) internal _royalties;
+    mapping(address => bool) public whitelisted;
+
+    function whitelist(address _user) external {
+    require(msg.sender == mintPrice, 'wrong value');
+    whitelisted[_user] = true;
+}
 
 
     /// @dev Sets token royalties
@@ -21,13 +53,38 @@ abstract contract ERC2981PerTokenRoyalties is ERC165, IERC2981Royalties {
         _royalties[id] = Royalty(recipient, value);
     }
 
-    /// @inheritdoc IERC2981Royalties
+
     function royaltyInfo(uint256 tokenId, uint256 value)
         external
         view
-        override
+       
         returns (address receiver, uint256 royaltyAmount)
     {
         Royalty memory royalty = _royalties[tokenId];
         return (royalty.recipient, (value * royalty.value) / 10000);
     }
+
+ constructor() payable ERC721('Un-Gentlemen', 'UNGENT'){
+     maxSupply = 10000;
+ }
+ function toggleIsMintEnabled() external onlyOwner {
+     isMintEnabled = !isMintEnabled;
+ }
+ function setMaxSupply(uint256 maxSupply_) external onlyOwner {
+     maxSupply = maxSupply_;
+ }
+ function mint() external payable {
+     require(isMintEnabled, 'wait your turn!');
+     require(mintedWallets[msg.sender] < 1, 'one only you greedy begger');
+     require(msg.value == mintPrice, 'wrong value');
+     require(maxSupply > totalSupply, 'there all gone sonny');
+     
+
+     mintedWallets[msg.sender]++;
+     totalSupply++;
+     uint256 tokenId = totalSupply;
+     _safeMint(msg.sender, tokenId);
+ }
+
+    
+} 
